@@ -1,0 +1,36 @@
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "mri-sequence-identification"
+version = "0.1.0"
+description = "Clinical MRI DICOM sequence identification and NIfTI conversion pipeline."
+readme = "README.md"
+requires-python = ">=3.10"
+license = { file = "LICENSE" }
+authors = [{ name = "MRI-Sequence-Identification contributors" }]
+dependencies = [
+  "numpy>=1.26",
+  "pandas>=2.0",
+  "Pillow>=10.0",
+  "pydicom>=2.4",
+  "nibabel>=5.0",
+  "tqdm>=4.65",
+]
+
+[project.optional-dependencies]
+vlm = [
+  "torch>=2.2",
+  "transformers>=4.45",
+  "accelerate>=0.30",
+  "qwen-vl-utils>=0.0.8",
+  "safetensors>=0.4",
+]
+dev = ["pytest>=8.0"]
+
+[project.scripts]
+mri-sequence = "mri_sequence_identification.cli:main"
+
+[tool.setuptools.packages.find]
+where = ["src"]

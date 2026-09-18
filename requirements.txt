@@ -1,0 +1,13 @@
+# Install a CUDA-compatible PyTorch build first for VLM inference.
+# Example: https://pytorch.org/get-started/locally/
+numpy>=1.26
+pandas>=2.0
+Pillow>=10.0
+pydicom>=2.4
+nibabel>=5.0
+tqdm>=4.65
+torch>=2.2
+transformers>=4.45
+accelerate>=0.30
+qwen-vl-utils>=0.0.8
+safetensors>=0.4
