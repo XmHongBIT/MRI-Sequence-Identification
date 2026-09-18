@@ -11,7 +11,7 @@ Reconstruct logical series by SeriesInstanceUID
    ↓
 Select a representative middle slice and preserve DICOM metadata
    ↓
-Compare all series from the same subject with [Lingshu 32B](https://huggingface.co/lingshu-medical-mllm/Lingshu-32B) (or other compatible models)
+Compare all series from the same subject with Lingshu 32B (or other compatible models)
    ↓
 Predict T1 / T1CE / T2 / FLAIR / DWI / ADC / SWI and other labels
    ↓
@@ -21,6 +21,8 @@ dcm2niix → NIfTI
    ↓
 Shape / spacing / affine / file-size / slice-count QC
 ```
+
+Recommended model: [Lingshu 32B on Hugging Face](https://huggingface.co/lingshu-medical-mllm/Lingshu-32B)
 
 Design principles:
 
