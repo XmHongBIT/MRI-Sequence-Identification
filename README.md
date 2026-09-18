@@ -38,14 +38,14 @@ The default input layout is:
 
 ```text
 dicom_root/
-├── tumor_category_a/
+├── SERIZE_a/
 │   ├── subject_001/
 │   │   ├── series_folder_1/
 │   │   │   ├── 0001.dcm
 │   │   │   └── ...
 │   │   └── series_folder_2/
 │   └── subject_002/
-└── tumor_category_b/
+└── SERIZE_b/
 ```
 
 If one source folder contains multiple `SeriesInstanceUID` values, the program splits it into multiple logical series instead of silently merging them.
