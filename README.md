@@ -22,7 +22,7 @@ dcm2niix → NIfTI
 Shape / spacing / affine / file-size / slice-count QC
 ```
 
-Recommended model: [Lingshu 32B on Hugging Face](https://huggingface.co/lingshu-medical-mllm/Lingshu-32B)
+Recommended model: [Lingshu 32B](https://huggingface.co/lingshu-medical-mllm/Lingshu-32B)
 
 Design principles:
 
