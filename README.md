@@ -153,14 +153,3 @@ Before a large-scale run, inspect `selected_four_modality_series.csv`, especiall
 | `dcm2nii_four_modalities_fast_safe.py` | `convert` |
 
 Private server paths, output directories, GPU assumptions, and dataset limits are no longer hard-coded in the source. They can be configured through command-line arguments. The original `py/` directory is left unchanged.
-
-## Data safety and reproducibility
-
-Do not commit real DICOM files, NIfTI files, patient names, medical record numbers, model weights, or generated CSV/JSON outputs to GitHub. The repository `.gitignore` ignores these files by default, but always inspect the working tree before committing:
-
-```bash
-git status --short
-git diff --stat
-```
-
-Public repositories should contain code, documentation, and small de-identified test data only. Manage model weights under their original license and distribution terms.
