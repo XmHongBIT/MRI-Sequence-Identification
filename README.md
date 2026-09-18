@@ -128,7 +128,7 @@ python -m mri_sequence_identification recognize \
   --dicom-root /data/raw_dicom \
   --output-dir /data/debug_results \
   --model-path /models/lingshu_32b \
-  --target-category glioma \
+  --target-category SERIZE_a \
   --target-subject subject_001
 ```
 
