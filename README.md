@@ -11,7 +11,7 @@ Reconstruct logical series by SeriesInstanceUID
    ↓
 Select a representative middle slice and preserve DICOM metadata
    ↓
-Compare all series from the same subject with Lingshu_32B (or others)
+Compare all series from the same subject with [Lingshu 32B](https://huggingface.co/lingshu-medical-mllm/Lingshu-32B) (or other compatible models)
    ↓
 Predict T1 / T1CE / T2 / FLAIR / DWI / ADC / SWI and other labels
    ↓
@@ -144,12 +144,3 @@ conversion_config.json
 ```
 
 Before a large-scale run, inspect `selected_four_modality_series.csv`, especially `SeriesDescription`, `ProtocolName`, `TR/TE/TI`, and `selection_source`. Then review `nifti_qc.csv`. Low-confidence predictions, short series, parsing failures, and mixed-UID source folders are marked with `review_required`.
-
-## Migration from the original scripts
-
-| Original script | New entry point |
-| --- | --- |
-| `lingshu_dicom_sequence_read*.py` | `recognize` |
-| `dcm2nii_four_modalities_fast_safe.py` | `convert` |
-
-Private server paths, output directories, GPU assumptions, and dataset limits are no longer hard-coded in the source. They can be configured through command-line arguments. The original `py/` directory is left unchanged.
