@@ -1,32 +1,38 @@
 # MRI-Sequence-Identification
 
-面向临床原始脑 MRI 的序列识别与 NIfTI 标准化流水线。项目把真实放射科输入中的逻辑 Series 重建、跨序列视觉识别、DICOM 物理参数校验、同一 Study 选择、`dcm2niix` 转换和 NIfTI QC 组织成一个可复用的 GitHub 项目。
+A reusable pipeline for clinical brain MRI sequence identification and NIfTI standardization. The project organizes logical DICOM series, performs cross-series visual identification, validates DICOM acquisition metadata, selects consistent same-Study modalities, converts selected series with `dcm2niix`, and performs post-conversion NIfTI quality control.
 
-> 本项目是研究/工程工具，不是医疗器械，也不能替代放射科医生审核。临床使用前必须完成机构级验证、隐私合规和人工 QC。
-
-## 处理逻辑
+## Workflow
 
 ```text
-原始 DICOM
+Raw DICOM
    ↓
-按 SeriesInstanceUID 重建逻辑序列
+Reconstruct logical series by SeriesInstanceUID
    ↓
-每个序列选代表性中间层，并保留 DICOM metadata
+Select a representative middle slice and preserve DICOM metadata
    ↓
-Lingshu/Qwen2.5-VL 同时比较同一 subject 的所有序列
+Compare all series from the same subject with Lingshu_32B (or others)
    ↓
-输出 T1 / T1CE / T2 / FLAIR / DWI / ADC / SWI 等标签
+Predict T1 / T1CE / T2 / FLAIR / DWI / ADC / SWI and other labels
    ↓
-轴位筛选 + FLAIR 物理参数校验 + 同 Study 约束
+Axial-plane filtering + FLAIR physical validation + same-Study constraint
    ↓
 dcm2niix → NIfTI
    ↓
-shape / spacing / affine / file-size / slice-count QC
+Shape / spacing / affine / file-size / slice-count QC
 ```
 
-设计原则：序列标签允许重复；某些序列可以缺失；原始 DICOM 不移动、不重命名、不修改；每个逻辑序列使用稳定 `record_id`；每个 subject 以 JSON 作为断点续跑的 canonical record；所有中间产物都能回溯到原始 DICOM。
+Design principles:
 
-## 输入目录
+- Sequence labels may repeat; a sequence may be absent.
+- Original DICOM files are never moved, renamed, or modified.
+- Every logical series receives a stable `record_id`.
+- Each subject has a canonical JSON record for safe resume and auditability.
+- Intermediate outputs remain traceable to the original DICOM files.
+
+## Input layout
+
+The default input layout is:
 
 ```text
 dicom_root/
@@ -40,11 +46,11 @@ dicom_root/
 └── tumor_category_b/
 ```
 
-如果一个文件夹混入多个 `SeriesInstanceUID`，程序会拆成多个逻辑序列，而不会把它们静默合并。
+If one source folder contains multiple `SeriesInstanceUID` values, the program splits it into multiple logical series instead of silently merging them.
 
-## 安装
+## Installation
 
-先安装与你的 NVIDIA 驱动匹配的 PyTorch，再安装项目：
+Install a PyTorch build compatible with your NVIDIA driver first, then install the project:
 
 ```bash
 python -m venv .venv
@@ -52,7 +58,7 @@ source .venv/bin/activate
 pip install -e ".[vlm]"
 ```
 
-Windows PowerShell：
+Windows PowerShell:
 
 ```powershell
 python -m venv .venv
@@ -60,17 +66,17 @@ python -m venv .venv
 pip install -e ".[vlm]"
 ```
 
-同时需要系统命令 `dcm2niix`：
+The system command `dcm2niix` is also required. Verify that it is available on your `PATH`:
 
 ```bash
 dcm2niix -h
 ```
 
-模型默认按本地目录加载。若确实要让 Transformers 下载模型，显式加入 `--allow-model-download`。
+The model is loaded from a local directory by default. To allow Transformers to download model files, explicitly add `--allow-model-download`.
 
-## 运行
+## Usage
 
-### 1. 只识别序列
+### 1. Identify MRI sequences
 
 ```bash
 python -m mri_sequence_identification recognize \
@@ -80,7 +86,7 @@ python -m mri_sequence_identification recognize \
   --max-subjects-per-category 400
 ```
 
-识别结果主要包括：
+The main recognition outputs are:
 
 ```text
 sequence_results/
@@ -93,7 +99,7 @@ sequence_results/
 └── series_filelists/
 ```
 
-### 2. 选择四模态并转换 NIfTI
+### 2. Select four modalities and convert to NIfTI
 
 ```bash
 python -m mri_sequence_identification convert \
@@ -102,9 +108,9 @@ python -m mri_sequence_identification convert \
   --dcm2niix /usr/local/bin/dcm2niix
 ```
 
-转换默认只接受同一 Study 的轴位 `T1/T1CE/T2/FLAIR`。FLAIR 默认要求名称线索或合理的 `TI/TE/TR`；需要宽松结果时显式加 `--non-strict-flair`。
+By default, conversion accepts only axial `T1/T1CE/T2/FLAIR` series from the same Study. FLAIR requires either a sequence-name clue or plausible `TI/TE/TR` values. Add `--non-strict-flair` only when a more permissive selection is needed.
 
-### 3. 一键运行
+### 3. Run the complete pipeline
 
 ```bash
 python -m mri_sequence_identification pipeline \
@@ -114,7 +120,7 @@ python -m mri_sequence_identification pipeline \
   --model-path /models/lingshu_32b
 ```
 
-### 4. 单个 subject 试跑
+### 4. Run a single category or subject during development
 
 ```bash
 python -m mri_sequence_identification recognize \
@@ -125,9 +131,9 @@ python -m mri_sequence_identification recognize \
   --target-subject subject_001
 ```
 
-## 输出与人工复核
+## Outputs and manual review
 
-转换阶段会生成：
+The conversion stage produces:
 
 ```text
 eligible_four_modality_subjects.csv
@@ -137,24 +143,24 @@ nifti_qc.csv
 conversion_config.json
 ```
 
-建议在大规模运行前先抽查 `selected_four_modality_series.csv` 中的 `SeriesDescription`、`ProtocolName`、`TR/TE/TI`、`selection_source`，再检查 `nifti_qc.csv`。低置信度、短序列、解析失败、混合 UID 文件夹会标记为 `review_required`。
+Before a large-scale run, inspect `selected_four_modality_series.csv`, especially `SeriesDescription`, `ProtocolName`, `TR/TE/TI`, and `selection_source`. Then review `nifti_qc.csv`. Low-confidence predictions, short series, parsing failures, and mixed-UID source folders are marked with `review_required`.
 
-## 从原始脚本迁移
+## Migration from the original scripts
 
-| 原脚本 | 新入口 |
+| Original script | New entry point |
 | --- | --- |
 | `lingshu_dicom_sequence_read*.py` | `recognize` |
 | `dcm2nii_four_modalities_fast_safe.py` | `convert` |
 
-历史脚本中的服务器路径、输出目录、GPU 数量和数据集上限不再写死在源码里，均可通过命令行参数调整。原始 `py/` 目录未被修改。
+Private server paths, output directories, GPU assumptions, and dataset limits are no longer hard-coded in the source. They can be configured through command-line arguments. The original `py/` directory is left unchanged.
 
-## 数据安全与复现
+## Data safety and reproducibility
 
-不要把真实 DICOM、NIfTI、患者姓名、住院号、模型权重或生成的 CSV/JSON 提交到 GitHub。仓库的 `.gitignore` 已默认忽略这些文件，但提交前仍应人工检查：
+Do not commit real DICOM files, NIfTI files, patient names, medical record numbers, model weights, or generated CSV/JSON outputs to GitHub. The repository `.gitignore` ignores these files by default, but always inspect the working tree before committing:
 
 ```bash
 git status --short
 git diff --stat
 ```
 
-建议公开仓库只包含代码、文档和脱敏的小型测试数据；模型权重使用其原始许可证单独管理。
+Public repositories should contain code, documentation, and small de-identified test data only. Manage model weights under their original license and distribution terms.
