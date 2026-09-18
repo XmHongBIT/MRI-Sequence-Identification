@@ -85,7 +85,6 @@ python -m mri_sequence_identification recognize \
   --dicom-root /data/raw_dicom \
   --output-dir /data/sequence_results \
   --model-path /models/lingshu_32b \
-  --max-subjects-per-category 400
 ```
 
 The main recognition outputs are:
