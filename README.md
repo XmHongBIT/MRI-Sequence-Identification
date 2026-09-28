@@ -100,7 +100,7 @@ sequence_results/
 └── series_filelists/
 ```
 
-### 2. Select four modalities and convert to NIfTI
+### 2. Select modalities and convert to NIfTI
 
 ```bash
 python -m mri_sequence_identification convert \
@@ -109,7 +109,37 @@ python -m mri_sequence_identification convert \
   --dcm2niix /usr/local/bin/dcm2niix
 ```
 
-By default, conversion accepts only axial `T1/T1CE/T2/FLAIR` series from the same Study. FLAIR requires either a sequence-name clue or plausible `TI/TE/TR` values. Add `--non-strict-flair` only when a more permissive selection is needed.
+By default, conversion considers axial `T1/T1CE/T2/FLAIR` series from the same Study. All four labels are selectable, but no modality is mandatory and each subject must have at least one selected modality. Missing optional modalities are recorded as `absent`; the original DICOM files are never modified.
+
+FLAIR requires either a sequence-name clue or plausible `TI/TE/TR` values. T1 rescue is restricted to a T1 token without a T2 token, and T1CE rejects `TOF/MRA/ANGIO` clues in `SeriesDescription`. Add `--non-strict-flair` only when a more permissive selection is needed.
+
+The modality policy is configurable:
+
+```bash
+# Select only T1, T2 and FLAIR; require all three.
+python -m mri_sequence_identification convert \
+  --manifest-csv /data/sequence_results/manifests/dcm2nii_manifest.csv \
+  --output-dir /data/nifti_output \
+  --modalities T1,T2,FLAIR \
+  --require T1,T2,FLAIR \
+  --min-modalities 3
+
+# Restore the original complete four-modality requirement.
+python -m mri_sequence_identification convert \
+  --manifest-csv /data/sequence_results/manifests/dcm2nii_manifest.csv \
+  --output-dir /data/nifti_output \
+  --modalities T1,T1CE,T2,FLAIR \
+  --require T1,T1CE,T2,FLAIR \
+  --min-modalities 4
+
+# Inspect label/study eligibility without running dcm2niix.
+python -m mri_sequence_identification convert \
+  --manifest-csv /data/sequence_results/manifests/dcm2nii_manifest.csv \
+  --output-dir /data/nifti_output \
+  --diagnose
+```
+
+If a manifest contains paths from another machine, use an explicit repeated prefix mapping only after checking the source layout, for example `--remap /media/su/=/media/wengjy/`. Conversion stops during preflight when fewer than half of the sampled source folders are reachable.
 
 ### 3. Run the complete pipeline
 
@@ -128,7 +158,7 @@ python -m mri_sequence_identification recognize \
   --dicom-root /data/raw_dicom \
   --output-dir /data/debug_results \
   --model-path /models/lingshu_32b \
-  --target-category SERIZE_a \
+  --target-category glioma \
   --target-subject subject_001
 ```
 
@@ -143,5 +173,7 @@ conversion_summary.csv
 nifti_qc.csv
 conversion_config.json
 ```
+
+The first two CSV filenames retain their historical `four_modality` names for compatibility; their contents follow the selected modality policy.
 
 Before a large-scale run, inspect `selected_four_modality_series.csv`, especially `SeriesDescription`, `ProtocolName`, `TR/TE/TI`, and `selection_source`. Then review `nifti_qc.csv`. Low-confidence predictions, short series, parsing failures, and mixed-UID source folders are marked with `review_required`.
