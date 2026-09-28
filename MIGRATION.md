@@ -12,6 +12,8 @@ This repository is the reusable version of the scripts originally kept in the pa
 - Labels may repeat and missing labels are allowed.
 - Raw model responses, per-subject JSON, CSV manifests and error logs are saved.
 - Conversion enforces axial acquisition, same Study selection and post-conversion NIfTI QC.
+- Conversion now uses a configurable modality policy: `T1/T1CE/T2/FLAIR` are selected by default, no modality is required by default, and at least one selected modality is sufficient. Use `--require` and `--min-modalities` to restore stricter cohorts.
+- T1/FLAIR disambiguation, T1CE contrast rescue/rejection, source-path preflight, repeated `--remap`, and `--diagnose` are available in the reusable converter.
 
 ## Deliberate cleanup
 
