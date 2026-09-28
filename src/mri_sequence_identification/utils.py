@@ -27,6 +27,22 @@ def number(value: Any, default: float | None = None) -> float | None:
         return default
 
 
+def bool_value(value: Any, default: bool = False) -> bool:
+    """Parse booleans from native values and CSV-style strings."""
+    if value is None:
+        return default
+    if isinstance(value, bool):
+        return value
+    if isinstance(value, (int, float)):
+        return bool(value)
+    normalized = text(value).lower()
+    if normalized in {"1", "true", "yes", "y", "on"}:
+        return True
+    if normalized in {"0", "false", "no", "n", "off", ""}:
+        return False
+    return default
+
+
 def integer(value: Any, default: int | None = None) -> int | None:
     try:
         return int(float(value))
