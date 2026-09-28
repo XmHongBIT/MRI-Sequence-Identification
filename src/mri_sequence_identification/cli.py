@@ -34,6 +34,39 @@ def _add_shared_conversion_args(parser: argparse.ArgumentParser) -> None:
     parser.add_argument("--min-ti-ms", type=float, default=1500.0)
     parser.add_argument("--min-te-ms", type=float, default=50.0)
     parser.add_argument("--min-tr-ms", type=float, default=4000.0)
+    _add_modality_policy_args(parser)
+
+
+def _add_modality_policy_args(parser: argparse.ArgumentParser) -> None:
+    parser.add_argument(
+        "--modalities",
+        default=None,
+        help="Comma-separated selected modalities. Default: T1,T1CE,T2,FLAIR.",
+    )
+    parser.add_argument(
+        "--require",
+        default=None,
+        help="Comma-separated modalities that must be present for a subject.",
+    )
+    parser.add_argument(
+        "--min-modalities",
+        type=int,
+        default=None,
+        help="Minimum number of selected modalities per subject. Default: 1.",
+    )
+    parser.add_argument(
+        "--remap",
+        action="append",
+        default=[],
+        metavar="FROM=TO",
+        help="Remap a manifest path prefix; repeat for multiple mappings.",
+    )
+    parser.add_argument("--workers", type=int, default=4, help="Parallel subject conversion workers.")
+    parser.add_argument("--diagnose", action="store_true", help="Print the selection waterfall without conversion.")
+    parser.add_argument("--no-t1-rescue", action="store_true", help="Disable metadata rescue for T1-labeled series.")
+    parser.add_argument("--no-flair-rescue", action="store_true", help="Disable metadata rescue for FLAIR-labeled series.")
+    parser.add_argument("--no-t1ce-rescue", action="store_true", help="Disable metadata rescue for T1CE-labeled series.")
+    parser.add_argument("--require-t1ce-contrast", action="store_true", help="Require explicit contrast evidence for T1CE.")
 
 
 def build_parser() -> argparse.ArgumentParser:
@@ -51,6 +84,10 @@ def build_parser() -> argparse.ArgumentParser:
     pipeline.add_argument("--allow-unknown-plane", action="store_true")
     pipeline.add_argument("--non-strict-flair", action="store_true")
     pipeline.add_argument("--axial-cos-threshold", type=float, default=0.85)
+    pipeline.add_argument("--min-ti-ms", type=float, default=1500.0)
+    pipeline.add_argument("--min-te-ms", type=float, default=50.0)
+    pipeline.add_argument("--min-tr-ms", type=float, default=4000.0)
+    _add_modality_policy_args(pipeline)
     return parser
 
 
@@ -69,13 +106,39 @@ def _recognizer_config(args: argparse.Namespace):
 
 def _conversion_config(args: argparse.Namespace, manifest: Path | None = None, output: Path | None = None):
     from .converter import ConversionConfig
+
+    def csv_items(value: str | None) -> tuple[str, ...] | None:
+        if value is None:
+            return None
+        return tuple(item.strip().upper() for item in value.split(",") if item.strip())
+
+    remaps: list[tuple[str, str]] = []
+    for item in getattr(args, "remap", []) or []:
+        if "=" not in item:
+            raise ValueError(f"Invalid --remap value {item!r}; expected FROM=TO")
+        source, target = item.split("=", 1)
+        if not source or not target:
+            raise ValueError(f"Invalid --remap value {item!r}; both FROM and TO are required")
+        remaps.append((source, target))
+
+    selected = csv_items(getattr(args, "modalities", None))
+    required = csv_items(getattr(args, "require", None))
     return ConversionConfig(
         manifest_csv=manifest or args.manifest_csv, output_dir=output or args.output_dir,
         dcm2niix=args.dcm2niix, timeout_seconds=args.timeout_seconds, resume=not args.no_resume,
+        workers=args.workers,
         axial_cos_threshold=args.axial_cos_threshold, allow_unknown_plane=args.allow_unknown_plane,
         strict_flair_validation=not args.non_strict_flair,
         flair_min_ti_ms=getattr(args, "min_ti_ms", 1500.0), flair_min_te_ms=getattr(args, "min_te_ms", 50.0),
         flair_min_tr_ms=getattr(args, "min_tr_ms", 4000.0),
+        t1_metadata_rescue=not args.no_t1_rescue,
+        flair_metadata_rescue=not args.no_flair_rescue,
+        t1ce_metadata_rescue=not args.no_t1ce_rescue,
+        t1ce_require_contrast_evidence=args.require_t1ce_contrast,
+        selected_modalities=selected or ("T1", "T1CE", "T2", "FLAIR"),
+        required_modalities=frozenset(required or ()),
+        min_modalities_per_subject=args.min_modalities if args.min_modalities is not None else 1,
+        path_prefix_remap=tuple(remaps), diagnose_only=args.diagnose,
     )
 
 
